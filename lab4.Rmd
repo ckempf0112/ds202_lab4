@@ -1,0 +1,113 @@
+---
+title: "Lab 4"
+author: "Colin Kempf"
+date: "10/25/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+#install.packages(tidyverse)
+library(classdata)
+library(ggplot2)
+library(dplyr)
+library(tidyverse)
+library(readxl)
+```
+
+```{r}
+defense <- read_excel('cyclonesFootball2020.xlsx', sheet='Defensive')
+offense <- read_excel('cyclonesFootball2020.xlsx', sheet='Offensive')
+biography <- read_excel('cyclonesFootball2020.xlsx', sheet='Biography')
+str(defense)
+str(offense)
+str(biography)
+```
+
+```{r}
+defClean <- mutate(defense, Name = as.factor(Name), Opponent_Opponent = as.factor(Opponent_Opponent), (across(Tackles_Solo:Pass_PB, as.numeric)))
+defClean <- defClean %>% group_by(Name, Opponent_Opponent) %>% mutate(timesPlayed = row_number())
+offClean <- mutate(offense, Name = as.factor(Name), Opponent_Opponent = as.factor(Opponent_Opponent), (across(Receiving_REC:Passing_INT, as.numeric)))
+offClean <- offClean %>% group_by(Name, Opponent_Opponent) %>% mutate(timesPlayed = row_number())
+bioClean <- mutate(separate(biography, Height, c('feet', 'inches')), (across(Weight, as.numeric)))
+str(defClean)
+str(offClean)
+str(bioClean)
+defClean
+offClean
+bioClean
+```
+
+```{r}
+offClean <- offClean %>% pivot_longer(Receiving_REC:Passing_INT, names_to = 'stat', values_to = 'score')
+offClean
+```
+
+
+```{r}
+offClean <- offClean %>% group_by(Name, stat) %>% mutate(statSum = sum(score, na.rm = TRUE))
+offClean
+```
+
+
+```{r}
+offClean3 <- offClean
+is.na(offClean3$statSum) <- offClean3$statSum > 500
+ggplot(offClean3, aes(x = statSum, y = stat)) + geom_boxplot()
+offClean3 <- offClean3 %>% filter(stat!='Receiving_YDS')
+ggplot(offClean3, aes(x = statSum, y = stat)) + geom_boxplot()
+ggplot(offClean, aes(x = statSum, y = Name, color = stat)) + geom_point()
+offClean3 <- offClean %>% filter(stat=='Receiving_YDS')
+ggplot(offClean3, aes(x = statSum, y = Name)) + geom_point() + ggtitle('Receiving Yards')
+offClean3 <- offClean %>% filter(stat=='Receiving_REC')
+ggplot(offClean3, aes(x = statSum, y = Name)) + geom_point() + ggtitle('Receivies')
+offClean3 <- offClean %>% filter(stat=='Receiving_TD')
+ggplot(offClean3, aes(x = statSum, y = Name)) + geom_point() + ggtitle('Recevinng Touchdowns')
+offClean3 <- offClean %>% filter(stat=='Rushing_ATT')
+ggplot(offClean3, aes(x = statSum, y = Name)) + geom_point() + ggtitle('Attempted Rushes')
+offClean3 <- offClean %>% filter(stat=='Rushing_YDS')
+ggplot(offClean3, aes(x = statSum, y = Name)) + geom_point() + ggtitle('Rushing Yards')
+offClean3 <- offClean %>% filter(stat=='Rushing_TD')
+ggplot(offClean3, aes(x = statSum, y = Name)) + geom_point() + ggtitle('Rushing Touchdowns')
+offClean3 <- offClean %>% filter(stat=='Passing_CMP-ATT')
+ggplot(offClean3, aes(x = statSum, y = Name)) + geom_point() + ggtitle('Passing Attempted Rush')
+offClean3 <- offClean %>% filter(stat=='Passing_YDS')
+ggplot(offClean3, aes(x = statSum, y = Name)) + geom_point() + ggtitle('Passing Yards')
+offClean3 <- offClean %>% filter(stat=='Passing_TD')
+ggplot(offClean3, aes(x = statSum, y = Name)) + geom_point() + ggtitle('Passing Touchdown')
+offClean3 <- offClean %>% filter(stat=='Passing_INT')
+ggplot(offClean3, aes(x = statSum, y = Name)) + geom_point() + ggtitle('Passing Interception')
+```
+Q3: The patterns we can see in the different charts help to show what plays are most often used and what players are going to make them. It is clear based on the passing statistics that Brock Purdy is most likely to be throwing. This adds up with our real world knowledge as he is the teams quarterback. We can also look at this with other areas, such as the player that receives the most, Xavier Hutchinson. He also has the most receiving yards, meaning that in most plays, a defensive team should look out for him trying to catch the ball. Comparing the different statistics to each other shows that receiving the ball is how most yards are gained, by a large margin. This means that a defensive team should keep a look out for passing plays more than runs, and should try and learn past passing plays, especially ones to the best receivers on the team. On a similar note, we can see that while Xavier Hutchinson has the most receiving yards, Charlie Kolar has the most receiving touchdowns. This could point to Xavier being a better runner in gaining yards, where as Charlie is able to work more at the goal line.  
+
+```{r}
+offClean4 <- offClean %>% pivot_wider(names_from = 'Opponent_Opponent', values_from = 'score') %>% filter(stat=='Receiving_YDS') %>% select(Name, Oregon, Oklahoma)
+offClean4
+ggplot(data = offClean4, aes(x = Oregon, y = Oklahoma)) + geom_point()
+```
+Q4: Based on the data from the games, it would seem that over all, more players did better against Oklahoma on the offensive team then they did against Oregon. Against Oregon the most a player ran was a little over 50 yards, and the rest with runs were around 20. Against Oklahoma, the highest was around 80, and the rest of the players with runs were around 40. Against Oregon, one plater even managed to be pushed back yards, and lose distance on run. 
+
+```{r}
+bioClean <- separate(bioClean, Hometown, c('City', 'State'), ',')
+head(bioClean)
+```
+
+
+```{r}
+bioClean
+count(bioClean, State)
+```
+
+
+```{r}
+offClean71 <- offClean %>% group_by(Opponent_Opponent, stat) %>% mutate(statSum = sum(score, na.rm = TRUE)) %>% filter(stat=='Rushing_TD')
+offClean72 <- offClean %>% filter(Name=='Purdy, Brock', stat=='Passing_YDS')
+offClean74 <- offClean %>% filter(Name=='Purdy, Brock', stat=='Rushing_YDS')
+offClean7 <- inner_join(offClean71, offClean74, by = 'Opponent_Opponent')
+offClean73 <- offClean %>% group_by(Opponent_Opponent, stat) %>% mutate(statSum = sum(score, na.rm = TRUE)) %>% filter(stat=='Receiving_REC')
+ggplot(data = offClean7, aes(x = score.y, y = statSum.x)) + geom_point() + ggtitle('Rushing Touchdown')
+offClean7 <- inner_join(offClean73, offClean72, by = 'Opponent_Opponent')
+ggplot(data = offClean7, aes(x = score.y, y = statSum.x)) + geom_point() + ggtitle('Passing to Receives')
+```
+
+Q7: It would appear, looking at both how well Purdy passed to rushing yards and rushing touchdowns, that the football team does do slightly better when Purdy does. The more he is able to gain rushing yards, the more touchdown he scores. When he is throwing more yards, the number of successful receives increase. These could be for one reason or another. Perhaps by throwing farther, he is able to better find more openings or spots where the throw will connect. By running further he is able to gain more yards, and thus the number of touchdowns by rushing increase as he is able to get the ball and the team further. 
